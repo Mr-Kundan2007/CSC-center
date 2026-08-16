@@ -11,13 +11,22 @@ export const errorHandler = (err, req, res, next) => {
   const requestId = req.id || 'N/A';
 
   // Internal log retention with Request ID
-  logger.error(err.message || 'Internal Server Error', {
-    requestId,
-    statusCode,
-    path: req.originalUrl,
-    method: req.method,
-    stack: err.stack
-  });
+  if (statusCode >= 500) {
+    logger.error(err.message || 'Internal Server Error', {
+      requestId,
+      statusCode,
+      path: req.originalUrl,
+      method: req.method,
+      stack: err.stack
+    });
+  } else {
+    logger.warn(`[${statusCode}] ${err.message || 'Client Request Notice'}`, {
+      requestId,
+      statusCode,
+      path: req.originalUrl,
+      method: req.method
+    });
+  }
 
   const isProduction = process.env.NODE_ENV === 'production';
 

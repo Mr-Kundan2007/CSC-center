@@ -87,7 +87,32 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 5. Global Rate Limiter
 app.use('/api', generalLimiter);
 
-// 6. API Metadata, Health & Readiness Endpoints
+// 6. API Metadata, Root Health & Readiness Endpoints
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    name: 'CSC Center API',
+    status: 'healthy',
+    version: '1.0.0',
+    description: 'Digital Service Center Production Backend API',
+    endpoints: {
+      health: '/api/health',
+      ready: '/api/ready',
+      services: '/api/services',
+      auth: '/api/auth'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api', (req, res) => {
   res.status(200).json({
     success: true,
