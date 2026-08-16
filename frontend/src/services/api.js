@@ -1,14 +1,19 @@
 import axios from 'axios';
 
-// Centralized API Client instance
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
+let API_BASE_URL = rawApiUrl;
+if (!API_BASE_URL) {
+  API_BASE_URL = 'http://localhost:5001/api';
+} else if (!API_BASE_URL.endsWith('/api') && !API_BASE_URL.endsWith('/api/')) {
+  API_BASE_URL = API_BASE_URL.replace(/\/+$/, '') + '/api';
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 // Request Interceptor for Auth Header
@@ -23,7 +28,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor for Token Expiration
+// Response Interceptor for Token Expiration & Descriptive Error Messages
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -31,6 +36,12 @@ api.interceptors.response.use(
       localStorage.removeItem('csc_token');
       localStorage.removeItem('csc_user');
     }
+    const customMessage =
+      error.response?.data?.message ||
+      (error.response?.status === 404
+        ? 'Backend API not reachable (404). Please ensure VITE_API_URL is configured in your Netlify environment variables.'
+        : error.message || 'Server connection error.');
+    error.message = customMessage;
     return Promise.reject(error);
   }
 );
