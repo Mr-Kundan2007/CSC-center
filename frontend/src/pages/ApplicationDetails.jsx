@@ -7,7 +7,8 @@ import FileUpload from '../components/FileUpload';
 import {
   getMyApplicationDetails,
   getSignedDocumentUrl,
-  uploadUserDocument
+  uploadUserDocument,
+  getDocumentDownloadUrl
 } from '../services/api';
 import {
   FileText,
@@ -82,7 +83,7 @@ const ApplicationDetails = () => {
     setDownloadingDocId(docId);
     try {
       const res = await getSignedDocumentUrl(applicationId, docId);
-      const url = res?.data?.signedUrl || res?.data?.downloadUrl || `http://localhost:5001/api/documents/download/${docId}`;
+      const url = res?.data?.signedUrl || res?.data?.downloadUrl || getDocumentDownloadUrl(docId, false, fileName);
       if (url && url !== '#') {
         const link = document.createElement('a');
         link.href = url;
@@ -95,10 +96,10 @@ const ApplicationDetails = () => {
           if (document.body.contains(link)) document.body.removeChild(link);
         }, 100);
       } else {
-        window.location.href = `http://localhost:5001/api/documents/download/${docId}?name=${encodeURIComponent(fileName || 'document.jpg')}`;
+        window.location.href = getDocumentDownloadUrl(docId, false, fileName);
       }
     } catch (err) {
-      window.location.href = `http://localhost:5001/api/documents/download/${docId}?name=${encodeURIComponent(fileName || 'document.jpg')}`;
+      window.location.href = getDocumentDownloadUrl(docId, false, fileName);
     } finally {
       setDownloadingDocId(null);
     }

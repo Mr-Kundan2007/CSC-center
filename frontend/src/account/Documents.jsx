@@ -3,7 +3,7 @@ import Alert from '../components/Alert';
 import Loading from '../components/Loading';
 import EmptyState from '../components/EmptyState';
 import SEO from '../components/SEO';
-import { getMyApplications, getSignedDocumentUrl, replaceCustomerDocument } from '../services/api';
+import { getMyApplications, getSignedDocumentUrl, replaceCustomerDocument, getDocumentDownloadUrl } from '../services/api';
 import { FolderArchive, Upload, Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const Documents = () => {
@@ -53,7 +53,7 @@ const Documents = () => {
   const handleDownload = async (appUuid, docId, fileName) => {
     try {
       const res = await getSignedDocumentUrl(appUuid, docId);
-      const url = res?.data?.signedUrl || res?.signedUrl || `http://localhost:5001/api/documents/download/${docId}`;
+      const url = res?.data?.signedUrl || res?.signedUrl || getDocumentDownloadUrl(docId, false, fileName);
       if (url && url !== '#') {
         const link = document.createElement('a');
         link.href = url;
@@ -66,10 +66,10 @@ const Documents = () => {
           if (document.body.contains(link)) document.body.removeChild(link);
         }, 100);
       } else {
-        window.location.href = `http://localhost:5001/api/documents/download/${docId}?name=${encodeURIComponent(fileName || 'document.jpg')}`;
+        window.location.href = getDocumentDownloadUrl(docId, false, fileName);
       }
     } catch (err) {
-      window.location.href = `http://localhost:5001/api/documents/download/${docId}?name=${encodeURIComponent(fileName || 'document.jpg')}`;
+      window.location.href = getDocumentDownloadUrl(docId, false, fileName);
     }
   };
 

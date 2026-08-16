@@ -46,6 +46,18 @@ api.interceptors.response.use(
   }
 );
 
+// Dynamic Document Download & View URL Generator
+export const getDocumentDownloadUrl = (docId, isView = false, fileName = '') => {
+  const queryParams = [];
+  if (isView) queryParams.push('view=1');
+  if (fileName) queryParams.push(`name=${encodeURIComponent(fileName)}`);
+  const queryStr = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+  return `${API_BASE_URL}/documents/download/${docId}${queryStr}`;
+};
+
+export const getDocUrl = (docId) => getDocumentDownloadUrl(docId, true);
+
+
 // Public Service, Notice & Site Settings API Endpoints
 export const getServices = async (params) => {
   const response = await api.get('/services', { params });

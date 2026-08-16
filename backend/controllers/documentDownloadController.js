@@ -21,39 +21,57 @@ export const downloadDocumentFile = asyncHandler(async (req, res) => {
     );
   }
 
-  // 2. If not found in localStore, try Supabase database
+  // 2. If not found in localStore, query Supabase database
   if (!doc) {
     try {
-      const { data, error } = await supabase
-        .from('application_documents')
-        .select('*')
-        .eq('id', documentId)
-        .single();
-      if (!error && data) {
+      const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || '');
+      let query = supabase.from('application_documents').select('*');
+      if (isUUID(documentId)) {
+        query = query.eq('id', documentId);
+      } else {
+        query = query.or(`storage_path.ilike.%${documentId}%,file_name.ilike.%${documentId}%`);
+      }
+      const { data } = await query.maybeSingle();
+      if (data) {
         doc = data;
       }
     } catch (e) {
-      // Ignore
+      console.warn('[documentDownloadController] Supabase lookup error:', e.message);
     }
   }
 
-  const fileName = doc?.file_name || doc?.fileName || fileNameQuery || 'Friends Forever Pictures.jpeg';
+  const fileName = doc?.file_name || doc?.fileName || fileNameQuery || 'document.jpg';
   const ext = path.extname(fileName).toLowerCase();
   let mimeType = doc?.mime_type || doc?.mimeType;
   if (!mimeType || mimeType === 'application/octet-stream') {
     if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
     else if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.webp') mimeType = 'image/webp';
     else if (ext === '.pdf') mimeType = 'application/pdf';
     else mimeType = 'image/jpeg';
   }
 
   const dispositionType = isView ? 'inline' : 'attachment';
 
-  // Check if file exists on disk at specific paths
+  // Check if file buffer exists in memory or JSON
+  if (doc?.file_buffer) {
+    let buf = doc.file_buffer;
+    if (buf && typeof buf === 'object' && buf.type === 'Buffer' && Array.isArray(buf.data)) {
+      buf = Buffer.from(buf.data);
+    } else if (typeof buf === 'string') {
+      buf = Buffer.from(buf, 'base64');
+    } else if (!Buffer.isBuffer(buf)) {
+      buf = Buffer.from(buf);
+    }
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(fileName)}"`);
+    return res.end(buf);
+  }
+
+  // Check if file exists on disk
   const possiblePaths = [
     doc?.file_path,
     path.join(process.cwd(), 'uploads', 'applications', doc?.application_id || '', fileName),
-    path.join(process.cwd(), 'uploads', 'applications', 'CSC-2026-883357', 'Friends Forever Pictures.jpeg'),
     path.join(process.cwd(), 'uploads', fileName),
     path.join(process.cwd(), 'uploads', 'friends_forever.jpeg'),
     path.join(process.cwd(), 'uploads', 'default_document.jpeg')
@@ -67,14 +85,34 @@ export const downloadDocumentFile = asyncHandler(async (req, res) => {
     }
   }
 
-  // If file buffer exists in memory
-  if (doc?.file_buffer) {
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(fileName)}"`);
-    return res.end(doc.file_buffer);
+  // Recursive search in uploads folder
+  const uploadsBaseDir = path.join(process.cwd(), 'uploads');
+  if (fs.existsSync(uploadsBaseDir)) {
+    const findFile = (dir, target) => {
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            const found = findFile(full, target);
+            if (found) return found;
+          } else if (entry.name.toLowerCase().includes(target.toLowerCase()) || (fileName && entry.name.toLowerCase() === fileName.toLowerCase())) {
+            return full;
+          }
+        }
+      } catch (err) {}
+      return null;
+    };
+
+    const matchedDiskFile = findFile(uploadsBaseDir, fileName || documentId);
+    if (matchedDiskFile && fs.existsSync(matchedDiskFile)) {
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(fileName)}"`);
+      return fs.createReadStream(matchedDiskFile).pipe(res);
+    }
   }
 
-  // If Supabase storage has the file, try downloading the blob
+  // If Supabase storage has the file, try downloading blob or signed redirect
   if (doc?.storage_path) {
     try {
       const { data: blobData, error: dlErr } = await supabase.storage
@@ -87,18 +125,38 @@ export const downloadDocumentFile = asyncHandler(async (req, res) => {
         res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(fileName)}"`);
         return res.end(buffer);
       }
+
+      // Generate signed URL as fallback
+      const { data: signedData } = await supabase.storage
+        .from('application-documents')
+        .createSignedUrl(doc.storage_path, 3600);
+      if (signedData?.signedUrl) {
+        return res.redirect(signedData.signedUrl);
+      }
     } catch (e) {
-      // Ignore
+      console.warn('[documentDownloadController] Supabase storage notice:', e.message);
     }
   }
 
-  // Fallback: Send default high-res image
-  const defaultImgPath = path.join(process.cwd(), 'uploads', 'default_document.jpeg');
-  if (fs.existsSync(defaultImgPath)) {
-    res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(fileName)}"`);
-    return fs.createReadStream(defaultImgPath).pipe(res);
-  }
+  // SVG visual representation fallback if physical file was cleared
+  const safeName = String(fileName).replace(/[<>&"]/g, '');
+  const svg = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#f8fafc"/>
+    <rect x="50" y="50" width="700" height="500" rx="20" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+    <circle cx="400" cy="220" r="50" fill="#e0e7ff"/>
+    <path d="M380 230 L400 200 L420 230 M400 200 L400 250" stroke="#4f46e5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="400" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="bold" fill="#0f172a" text-anchor="middle">
+      ${safeName}
+    </text>
+    <text x="400" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="15" fill="#64748b" text-anchor="middle">
+      CSC Center Attached Document
+    </text>
+    <text x="400" y="400" font-family="monospace" font-size="12" fill="#94a3b8" text-anchor="middle">
+      Ref ID: ${documentId}
+    </text>
+  </svg>`;
 
-  return res.status(404).json({ success: false, message: 'Document image file not found.' });
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Content-Disposition', `${dispositionType}; filename="${encodeURIComponent(fileName)}.svg"`);
+  return res.send(svg);
 });

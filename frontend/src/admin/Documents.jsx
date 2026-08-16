@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Alert from '../components/Alert';
 import Loading from '../components/Loading';
 import EmptyState from '../components/EmptyState';
-import { getAdminDocuments, getAdminSignedDocumentUrl } from '../services/api';
+import { getAdminDocuments, getAdminSignedDocumentUrl, getDocumentDownloadUrl } from '../services/api';
 import {
   FolderArchive,
   Download,
@@ -49,14 +49,14 @@ const Documents = () => {
   };
 
   const getDocUrl = (docId) => {
-    return `http://localhost:5001/api/documents/download/${docId}?view=1`;
+    return getDocumentDownloadUrl(docId, true);
   };
 
   const handleDownload = async (applicationId, docId, fileName) => {
     setDownloadingDocId(docId);
     try {
       const res = await getAdminSignedDocumentUrl(applicationId, docId);
-      const url = res?.data?.signedUrl || res?.data?.downloadUrl || `http://localhost:5001/api/documents/download/${docId}`;
+      const url = res?.data?.signedUrl || res?.data?.downloadUrl || getDocumentDownloadUrl(docId, false, fileName);
       if (url && url !== '#') {
         const link = document.createElement('a');
         link.href = url;
@@ -69,10 +69,10 @@ const Documents = () => {
           if (document.body.contains(link)) document.body.removeChild(link);
         }, 100);
       } else {
-        window.location.href = `http://localhost:5001/api/documents/download/${docId}?name=${encodeURIComponent(fileName || 'document.jpg')}`;
+        window.location.href = getDocumentDownloadUrl(docId, false, fileName);
       }
     } catch (err) {
-      window.location.href = `http://localhost:5001/api/documents/download/${docId}?name=${encodeURIComponent(fileName || 'document.jpg')}`;
+      window.location.href = getDocumentDownloadUrl(docId, false, fileName);
     } finally {
       setDownloadingDocId(null);
     }
