@@ -1,0 +1,381 @@
+-- ============================================================================
+-- CSC CENTER COMPLETE DATABASE SCHEMA & SEED SCRIPT FOR SUPABASE
+-- Run this entire script in your Supabase SQL Editor to create all tables.
+-- ============================================================================
+
+-- 1. EXTENSIONS & TRIGGER FUNCTIONS
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. CORE USERS & AUTH TABLES
+
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name TEXT NOT NULL,
+    email TEXT NULL,
+    mobile TEXT NOT NULL,
+    password_hash TEXT NULL,
+    role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin', 'staff')),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx ON users (email) WHERE email IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_mobile ON users(mobile);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ADMIN USERS TABLE
+CREATE TABLE IF NOT EXISTS admin_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT admin_users_user_id_unique UNIQUE (user_id)
+);
+
+-- 3. SERVICES CATALOG TABLE
+CREATE TABLE IF NOT EXISTS services (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    short_description TEXT NULL,
+    description TEXT NULL,
+    category TEXT NOT NULL CHECK (category IN (
+        'government-documents',
+        'identity-pan',
+        'education',
+        'jobs-exams',
+        'financial-utility',
+        'travel-passport',
+        'digital-services',
+        'other'
+    )),
+    icon TEXT NULL,
+    featured BOOLEAN NOT NULL DEFAULT false,
+    available BOOLEAN NOT NULL DEFAULT true,
+    estimated_time TEXT NULL,
+    service_fee NUMERIC(10, 2) NULL CHECK (service_fee >= 0),
+    documents JSONB NOT NULL DEFAULT '[]'::jsonb,
+    process_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+    notes TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_services_slug ON services(slug);
+CREATE INDEX IF NOT EXISTS idx_services_category ON services(category);
+CREATE INDEX IF NOT EXISTS idx_services_available ON services(available);
+
+DROP TRIGGER IF EXISTS update_services_updated_at ON services;
+CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON services FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 4. APPLICATIONS TABLE
+CREATE TABLE IF NOT EXISTS applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_id TEXT UNIQUE NOT NULL,
+    user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    service_id UUID NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
+    full_name TEXT NOT NULL,
+    mobile TEXT NOT NULL,
+    email TEXT NULL,
+    address TEXT NULL,
+    city TEXT NULL,
+    state TEXT NULL,
+    pincode TEXT NULL,
+    date_of_birth DATE NULL,
+    remarks TEXT NULL,
+    assigned_to UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
+        'pending', 'under_review', 'document_required', 'approved', 'rejected', 'completed'
+    )),
+    payment_status TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN (
+        'pending', 'paid', 'failed', 'refunded', 'not_required'
+    )),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_applications_application_id ON applications(application_id);
+CREATE INDEX IF NOT EXISTS idx_applications_user_id ON applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_applications_service_id ON applications(service_id);
+CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
+CREATE INDEX IF NOT EXISTS idx_applications_created_at ON applications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_applications_assigned_to ON applications(assigned_to);
+
+DROP TRIGGER IF EXISTS update_applications_updated_at ON applications;
+CREATE TRIGGER update_applications_updated_at BEFORE UPDATE ON applications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 5. APPLICATION DOCUMENTS TABLE
+CREATE TABLE IF NOT EXISTS application_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    document_type TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    storage_path TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_size BIGINT NOT NULL CHECK (file_size > 0),
+    uploaded_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_app_documents_application_id ON application_documents(application_id);
+
+-- 6. APPLICATION STATUS HISTORY (Audit Trail)
+CREATE TABLE IF NOT EXISTS application_status_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    old_status TEXT NULL,
+    new_status TEXT NOT NULL,
+    changed_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    note TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_status_history_application_id ON application_status_history(application_id);
+
+-- 7. APPOINTMENTS TABLE
+CREATE TABLE IF NOT EXISTS appointments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    appointment_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    service_id UUID REFERENCES services(id) ON DELETE SET NULL,
+    application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status VARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'confirmed', 'completed', 'cancelled', 'no_show')),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    cancelled_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON appointments(user_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date, status);
+
+DROP TRIGGER IF EXISTS update_appointments_updated_at ON appointments;
+CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 8. PAYMENTS TABLE
+CREATE TABLE IF NOT EXISTS payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_id UUID NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+    currency TEXT NOT NULL DEFAULT 'INR',
+    payment_method TEXT NULL,
+    transaction_id TEXT UNIQUE NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'refunded')),
+    gateway_response JSONB NOT NULL DEFAULT '{}'::jsonb,
+    paid_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_payments_application_id ON payments(application_id);
+CREATE INDEX IF NOT EXISTS idx_payments_transaction_id ON payments(transaction_id);
+
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 9. NOTICES TABLE
+CREATE TABLE IF NOT EXISTS notices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'warning', 'success', 'urgent')),
+    is_published BOOLEAN NOT NULL DEFAULT true,
+    priority INTEGER NOT NULL DEFAULT 0,
+    starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NULL,
+    created_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notices_active ON notices(is_published, starts_at, expires_at);
+
+DROP TRIGGER IF EXISTS update_notices_updated_at ON notices;
+CREATE TRIGGER update_notices_updated_at BEFORE UPDATE ON notices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 10. CONTACT MESSAGES TABLE
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    mobile TEXT NOT NULL,
+    email TEXT NULL,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'read', 'in_progress', 'resolved')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status);
+
+DROP TRIGGER IF EXISTS update_contact_messages_updated_at ON contact_messages;
+CREATE TRIGGER update_contact_messages_updated_at BEFORE UPDATE ON contact_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 11. CENTER HOLIDAYS & WORKFLOW TABLES
+CREATE TABLE IF NOT EXISTS center_holidays (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    date DATE UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS email_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_key VARCHAR(100) UNIQUE NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    body_html TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. ROW LEVEL SECURITY & PERMISSIONS
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE application_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE application_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+
+-- Allow Public to view active services and active notices
+DROP POLICY IF EXISTS "Public Read Active Services" ON services;
+CREATE POLICY "Public Read Active Services" ON services FOR SELECT USING (available = true);
+
+DROP POLICY IF EXISTS "Public Read Active Notices" ON notices;
+CREATE POLICY "Public Read Active Notices" ON notices FOR SELECT USING (is_published = true);
+
+-- Allow backend service role complete access
+DROP POLICY IF EXISTS "Service Role Full Access Users" ON users;
+CREATE POLICY "Service Role Full Access Users" ON users FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service Role Full Access Applications" ON applications;
+CREATE POLICY "Service Role Full Access Applications" ON applications FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service Role Full Access Documents" ON application_documents;
+CREATE POLICY "Service Role Full Access Documents" ON application_documents FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service Role Full Access Appointments" ON appointments;
+CREATE POLICY "Service Role Full Access Appointments" ON appointments FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service Role Full Access Payments" ON payments;
+CREATE POLICY "Service Role Full Access Payments" ON payments FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service Role Full Access Contact" ON contact_messages;
+CREATE POLICY "Service Role Full Access Contact" ON contact_messages FOR ALL USING (true);
+
+-- 13. STORAGE BUCKET CREATION (For uploaded documents)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('application-documents', 'application-documents', false, 10485760, ARRAY['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'])
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Service Role Private Storage Bucket Access" ON storage.objects;
+CREATE POLICY "Service Role Private Storage Bucket Access" ON storage.objects FOR ALL USING (bucket_id = 'application-documents');
+
+-- 14. SEED ADMIN USER & INITIAL SERVICES
+INSERT INTO users (id, full_name, email, mobile, role, is_active)
+VALUES 
+    ('00000000-0000-0000-0000-000000000001', 'princeydv', 'admin@csccenter.in', '9155098378', 'admin', true),
+    ('00000000-0000-0000-0000-000000000002', 'princeydv', 'princesinghara4@gmail.com', '9155098379', 'admin', true)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO admin_users (user_id)
+SELECT id FROM users WHERE role = 'admin'
+ON CONFLICT (user_id) DO NOTHING;
+
+-- Seed Essential CSC Services
+INSERT INTO services (slug, title, short_description, description, category, icon, featured, available, estimated_time, documents, process_steps)
+VALUES
+(
+    'pan-card-application',
+    'PAN Card Application',
+    'Assistance for new Permanent Account Number (Form 49A) online applications.',
+    'New PAN Card application assistance for individuals. Includes document verification and e-PAN delivery guidance.',
+    'identity-pan',
+    'CreditCard',
+    true,
+    true,
+    '7 - 15 Business Days',
+    '["Aadhaar Card", "Proof of Date of Birth", "Two passport size photographs"]'::jsonb,
+    '[{"step": 1, "title": "Submit Details"}, {"step": 2, "title": "Attach Identity Proof"}, {"step": 3, "title": "Verification & Submission"}]'::jsonb
+),
+(
+    'pan-card-correction',
+    'PAN Card Correction',
+    'Correction of name, DOB, father''s name, or photo in existing PAN card.',
+    'Assistance with updating or correcting existing PAN card details on official NSDL/UTIITSL records.',
+    'identity-pan',
+    'CreditCard',
+    true,
+    true,
+    '10 - 20 Business Days',
+    '["Existing PAN Card Copy", "Aadhaar Card with updated details"]'::jsonb,
+    '[{"step": 1, "title": "Select Correction Fields"}, {"step": 2, "title": "Upload Proofs"}, {"step": 3, "title": "Submit to Portal"}]'::jsonb
+),
+(
+    'income-certificate',
+    'Income Certificate (आय प्रमाण पत्र)',
+    'Online application for State Government Income Certificate (RTPS).',
+    'Official State Revenue department income certificate application assistance for scholarship, subsidies, and government schemes.',
+    'government-documents',
+    'FileText',
+    true,
+    true,
+    '10 - 15 Business Days',
+    '["Aadhaar Card", "Salary Slip / Land Document / Income Self Declaration", "Ration Card Copy"]'::jsonb,
+    '[{"step": 1, "title": "Enter Income Details"}, {"step": 2, "title": "Attach Aadhaar & Proof"}, {"step": 3, "title": "RTPS Verification"}]'::jsonb
+),
+(
+    'caste-certificate',
+    'Caste Certificate (जाति प्रमाण पत्र)',
+    'Online application for SC/ST/OBC/EBC Caste Certificate via RTPS.',
+    'Government certified caste certificate application for reservation, education, and competitive exams.',
+    'government-documents',
+    'Award',
+    true,
+    true,
+    '10 - 15 Business Days',
+    '["Aadhaar Card", "Ancestral Land Khatiyan / Family Member Caste Certificate", "Passport Photo"]'::jsonb,
+    '[{"step": 1, "title": "Select Category"}, {"step": 2, "title": "Upload Ancestral Proof"}, {"step": 3, "title": "CO / SDO Approval"}]'::jsonb
+),
+(
+    'residence-certificate',
+    'Residence Certificate (निवास प्रमाण पत्र)',
+    'Online application for Domicile / Residential Certificate (RTPS).',
+    'Proof of residence certificate from Block Revenue Officer for admissions, government jobs, and identification.',
+    'government-documents',
+    'Home',
+    true,
+    true,
+    '10 - 15 Business Days',
+    '["Aadhaar Card", "Electricity Bill / Ration Card", "Self Declaration"]'::jsonb,
+    '[{"step": 1, "title": "Provide Address"}, {"step": 2, "title": "Attach Address Proof"}, {"step": 3, "title": "Revenue Approval"}]'::jsonb
+),
+(
+    'ayushman-bharat-card',
+    'Ayushman Card (PM-JAY)',
+    'Healthcare coverage card for cashless medical treatment up to ₹5 Lakh/year.',
+    'Pradhan Mantri Jan Arogya Yojana health card registration and e-KYC assistance for eligible families.',
+    'financial-utility',
+    'HeartPulse',
+    true,
+    true,
+    '1 - 3 Business Days',
+    '["Aadhaar Card", "Ration Card / PM-JAY Family Letter", "Mobile Linked to Aadhaar"]'::jsonb,
+    '[{"step": 1, "title": "Check Eligibility"}, {"step": 2, "title": "Aadhaar e-KYC Verification"}, {"step": 3, "title": "Download Ayushman Card"}]'::jsonb
+)
+ON CONFLICT (slug) DO UPDATE SET
+    title = EXCLUDED.title,
+    short_description = EXCLUDED.short_description,
+    description = EXCLUDED.description,
+    category = EXCLUDED.category,
+    documents = EXCLUDED.documents,
+    process_steps = EXCLUDED.process_steps;
