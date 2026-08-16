@@ -17,7 +17,14 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Landmark,
+  FileText,
+  MapPin,
+  Layers,
+  Compass,
+  Scroll,
+  Home
 } from 'lucide-react';
 
 const iconMap = {
@@ -33,6 +40,13 @@ const iconMap = {
   Image,
   Laptop,
   Grid,
+  Landmark,
+  FileText,
+  MapPin,
+  Layers,
+  Compass,
+  Scroll,
+  Home
 };
 
 const ServiceCard = ({ service }) => {

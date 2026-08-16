@@ -1,6 +1,7 @@
 // Centralized data repository for CSC Digital Service Center
 export const serviceCategories = [
   "All Services",
+  "Land & Revenue Services (जमीन संबंधी सेवाएं)",
   "Government Documents",
   "Identity & PAN",
   "Education",
@@ -602,5 +603,244 @@ export const servicesData = [
     faq: [
       { question: "When should pensioners submit Jeevan Pramaan?", answer: "Pensioners typically need to submit their life certificate annually, usually in November." }
     ]
+  },
+
+  // --- LAND & REVENUE SERVICES (जमीन संबंधी सभी सेवाएं) ---
+  {
+    id: "land-mutation-application",
+    slug: "land-mutation-application",
+    title: "Land Mutation / Dakhil Kharij (दाखिल-खारिज ऑनलाइन आवेदन)",
+    shortDescription: "Online application for land mutation (Dakhil-Kharij) after registry or inheritance.",
+    description: "Assistance with filing online Land Mutation (दाखिल-खारिज) applications on state revenue portals (Bihar Bhumi / Bhulekh) following property registry, purchase, gift deed, or inheritance transfer.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "Landmark",
+    featured: true,
+    available: true,
+    estimatedTime: "30 - 90 Days",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "Sale Deed / Registry Kewala Copy (रजिस्ट्री केवाला प्रतिलिपि)",
+      "Seller's Previous Jamabandi / Khata-Khesra Details",
+      "Applicant Aadhaar Card & Mobile Number",
+      "Waris Praman Patra / Death Certificate (if applying through inheritance)"
+    ],
+    process: [
+      { step: 1, title: "Document Verification", description: "Verify registry deed details, volume/page number, and seller jamabandi." },
+      { step: 2, title: "Online Portal Filing", description: "Submit mutation application on state revenue portal (Bihar Bhumi / State Land Portal)." },
+      { step: 3, title: "Upload Scanned Deeds", description: "Upload PDF copies of registered sale deed and affidavits." },
+      { step: 4, title: "Receive Case Number", description: "Generate Mutation Case Reference Number for tracking." },
+      { step: 5, title: "Revenue Inspection", description: "Karamchari & CI submit field inspection and verification report to Circle Officer (CO)." },
+      { step: 6, title: "Shuddhi Patra", description: "Receive final Mutation Order (Shuddhi Patra) and new Jamabandi creation." }
+    ],
+    notes: "Ensure the scanned PDF copy of the registry deed is clear and legible for CO verification.",
+    faq: [
+      { question: "How to track Dakhil Kharij application?", answer: "You can track the live status using the Case Number, Year, and District/Anchal on the state land portal or through our center tracking page." },
+      { question: "What is Shuddhi Patra?", answer: "Shuddhi Patra is the official correction slip issued by the Circle Officer once land mutation is approved." }
+    ]
+  },
+  {
+    id: "land-tax-receipt-online",
+    slug: "land-tax-receipt-online",
+    title: "Land Tax Receipt / Jamin Rasid (भू-लगान रसीद ऑनलाइन)",
+    shortDescription: "Pay annual government land tax (Bhu-Lagan) online and download certified receipt.",
+    description: "Assistance with searching online Jamabandi registers, calculating pending land revenue dues, paying government land tax online, and downloading instantaneous certified tax payment receipts.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "Receipt",
+    featured: true,
+    available: true,
+    estimatedTime: "Instant / Same Day",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "District, Anchal, and Halka / Mauja Name",
+      "Khata Number, Khesra (Plot) Number, or Jamabandi Number",
+      "Previous Year Land Tax Receipt (if available)",
+      "Aadhaar & Mobile Number for payment confirmation"
+    ],
+    process: [
+      { step: 1, title: "Find Jamabandi", description: "Search digital Jamabandi using Khata, Khesra, or Raiyat name." },
+      { step: 2, title: "Calculate Dues", description: "View total pending revenue dues and cess on the portal." },
+      { step: 3, title: "Online Payment", description: "Process payment via Net Banking, UPI, or Debit Card." },
+      { step: 4, title: "Download Rasid", description: "Instantly download and print digitally signed government land tax receipt." }
+    ],
+    notes: "Keep your previous land receipt handy to verify Bhag Vartman and Pristh Vartman numbers.",
+    faq: [
+      { question: "Why is online land tax receipt required?", answer: "An up-to-date land tax receipt is mandatory proof of land possession for LPC applications, bank loans, crop damage relief, and registry transactions." }
+    ]
+  },
+  {
+    id: "jamabandi-khatiyan-copy",
+    slug: "jamabandi-khatiyan-copy",
+    title: "Khatiyan & Jamabandi Copy (खतियान / जमाबंदी पंजी प्रतिलिपि)",
+    shortDescription: "View, verify, and download certified online copy of Khatiyan and Jamabandi register.",
+    description: "Assistance in searching digital Record of Rights (RoR), historic survey Khatiyan (Cadastral Survey CS, Revisional Survey RS), and online Jamabandi panji details directly from state revenue databases.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "FileText",
+    featured: false,
+    available: true,
+    estimatedTime: "Instant Download",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "District, Anchal, Halka & Mauja / Village Name",
+      "Khata Number, Plot (Khesra) Number, or Ancestor Raiyat Name",
+      "Applicant Mobile Number"
+    ],
+    process: [
+      { step: 1, title: "Specify Location", description: "Identify District, Block/Anchal, and Revenue Village." },
+      { step: 2, title: "Database Query", description: "Query digital land records database for matching Khata/Khesra." },
+      { step: 3, title: "Verify RoR Details", description: "Inspect owner names, shared shares, land type, and plot area (Rakba)." },
+      { step: 4, title: "Print Certified Copy", description: "Print high-quality Record of Rights (Khatiyan / Jamabandi) copy." }
+    ],
+    notes: "Useful for checking inherited land shares and verifying ownership before property purchase.",
+    faq: [
+      { question: "What is the difference between Khatiyan and Jamabandi?", answer: "Khatiyan records historical ancestral survey rights, while Jamabandi records the current active taxpayer and ownership details." }
+    ]
+  },
+  {
+    id: "land-possession-certificate-lpc",
+    slug: "land-possession-certificate-lpc",
+    title: "Land Possession Certificate - LPC (भूमि स्वामित्व प्रमाण पत्र)",
+    shortDescription: "Online application for Land Possession Certificate (LPC) for agricultural loans & subsidies.",
+    description: "Assistance in applying for government Land Possession Certificates (LPC) issued by the Circle Officer (CO Anchal). Essential for bank agricultural loans (KCC), tractor loans, and government subsidy schemes.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "FileCheck",
+    featured: true,
+    available: true,
+    estimatedTime: "15 - 30 Business Days",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "Current Year Up-to-date Paid Land Tax Receipt (अद्यतन भू-लगान रसीद)",
+      "Self-Declaration Affidavit Form (स्व-घोषणा पत्र)",
+      "Applicant Aadhaar Card and Passport Photo",
+      "Jamabandi Details / Registered Sale Deed Copy"
+    ],
+    process: [
+      { step: 1, title: "Verify Up-to-date Tax", description: "Ensure the land tax for the current financial year is fully paid." },
+      { step: 2, title: "Draft Self-Declaration", description: "Prepare and scan self-declaration affidavit with plot details." },
+      { step: 3, title: "Submit LPC Petition", description: "File application on state revenue department portal." },
+      { step: 4, title: "Revenue Verification", description: "Halka Karamchari & CI verify possession and recommend approval." },
+      { step: 5, title: "Download Digitally Signed LPC", description: "Download official digitally signed LPC certificate." }
+    ],
+    notes: "LPC is valid for 1 year from the date of issuance for bank loan and scheme purposes.",
+    faq: [
+      { question: "Who needs an LPC certificate?", answer: "Farmers and landowners applying for Kisan Credit Card (KCC), agriculture subsidies, diesel subsidy, or bank loans against land." }
+    ]
+  },
+  {
+    id: "bhu-naksha-land-map",
+    slug: "bhu-naksha-land-map",
+    title: "Bhu-Naksha / Plot Map (भू-नक्शा / जमीन का नक्शा डाउनलोड)",
+    shortDescription: "Download and print geo-referenced cadastral plot maps with plot boundaries.",
+    description: "Get high-resolution village cadastral maps and plot boundary maps (भू-नक्शा) downloaded and printed directly from state digital land record GIS portals.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "MapPin",
+    featured: false,
+    available: true,
+    estimatedTime: "Instant / Same Day",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "District, Anchal, and Village / Mauja Name",
+      "Khesra (Plot) Number",
+      "Revenue Sheet Number (चद्दर संख्या if known)"
+    ],
+    process: [
+      { step: 1, title: "Select Village & Sheet", description: "Locate village GIS map sheet on Bhu-Naksha portal." },
+      { step: 2, title: "Highlight Plot", description: "Locate and highlight specific Khesra plot on interactive map." },
+      { step: 3, title: "Generate Plot Report", description: "Generate plot dimension report with neighboring boundaries (Chouhaddi)." },
+      { step: 4, title: "High-Res Print", description: "Print map copy with dimensions and boundary markers." }
+    ],
+    notes: "Helps verify plot shape, dimensions, road access, and boundary disputes before purchase.",
+    faq: [
+      { question: "Can I get map with dimensions (furlong/feet)?", answer: "Yes, official Bhu-Naksha prints show scale and adjacent plot boundary markings." }
+    ]
+  },
+  {
+    id: "parimarjan-land-rectification",
+    slug: "parimarjan-land-rectification",
+    title: "Land Record Rectification - Parimarjan (परिमार्जन / जमाबंदी सुधार)",
+    shortDescription: "Online correction of spelling, Khata, Khesra, area (Rakba), or lagaan in digital Jamabandi.",
+    description: "Assistance with filing online Parimarjan petitions to rectify incorrect entries in digitised Jamabandi registers, including misspelled owner names, missing Khata/Khesra numbers, and incorrect plot area (rakba) entries.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "Layers",
+    featured: false,
+    available: true,
+    estimatedTime: "30 - 60 Business Days",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "Certified Copy of Sale Deed / Kewala or Khatiyan",
+      "Previous Offline Jamabandi / Rent Receipts (पुराना लगान रसीद)",
+      "Applicant Aadhaar Card & Correction Application Form",
+      "Self-Declaration Undertaking"
+    ],
+    process: [
+      { step: 1, title: "Identify Discrepancy", description: "Check error type (Name correction, Khata/Khesra missing, Area correction)." },
+      { step: 2, title: "Prepare Evidence Docs", description: "Scan registered deed or old offline Jamabandi proof." },
+      { step: 3, title: "File Parimarjan Petition", description: "Submit application on state Parimarjan portal." },
+      { step: 4, title: "Anchal Verification", description: "Halka Karamchari cross-verifies with physical register II." },
+      { step: 5, title: "Update in System", description: "CO approves correction and digital Jamabandi is updated online." }
+    ],
+    notes: "Attach the clearest possible scan of your original registered deed or old Khatiyan copy.",
+    faq: [
+      { question: "What errors can be corrected through Parimarjan?", answer: "Raiyat name spelling, father's name, missing Khata/Plot number, incorrect area (Acre/Decimal/Katha/Dhur), and lagan assessment errors." }
+    ]
+  },
+  {
+    id: "land-registry-deed-copy",
+    slug: "land-registry-deed-copy",
+    title: "Registered Deed / Kewala Copy (रजिस्ट्री केवाला नकल खोज)",
+    shortDescription: "Online search and certified copy application for registered property sale deeds.",
+    description: "Search property registration records from 1990 to present across registration offices (Sub-Registrar). Obtain certified e-copies and inspect property encumbrance history (Non-Encumbrance Certificate).",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "BookOpen",
+    featured: false,
+    available: true,
+    estimatedTime: "3 - 7 Business Days",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "Registry Office (Registration Circle) Name",
+      "Deed Number / Year of Registration OR Buyer / Seller Name",
+      "Mauja Name & Khata/Plot Number",
+      "Applicant Identity Proof"
+    ],
+    process: [
+      { step: 1, title: "Record Search", description: "Search property registration database by deed number, year, or party names." },
+      { step: 2, title: "Verify Index II", description: "Inspect deed summary index, stamp duty details, and property schedule." },
+      { step: 3, title: "Apply for Certified Copy", description: "Submit formal petition for certified digital copy from registration office." },
+      { step: 4, title: "Receive Copy", description: "Receive certified registered deed (Kewala) copy." }
+    ],
+    notes: "Knowing the registration year and deed number significantly speeds up the search process.",
+    faq: [
+      { question: "Can I find old registered deeds before 2000?", answer: "Yes, digitised records from 1990 onwards are searchable online; for older records, manual inspection petitions can be filed." }
+    ]
+  },
+  {
+    id: "land-measurement-demarcation",
+    slug: "land-measurement-demarcation",
+    title: "Land Demarcation & Measurement (सरकारी अमीन द्वारा जमीन मापी)",
+    shortDescription: "Online application for government Amin land measurement and boundary settlement.",
+    description: "Assistance with filing formal government Amin measurement petitions at the Circle Office (CO Anchal) for peaceful demarcation, boundary disputes, or land partitioning.",
+    category: "Land & Revenue Services (जमीन संबंधी सेवाएं)",
+    iconName: "Compass",
+    featured: false,
+    available: true,
+    estimatedTime: "15 - 45 Business Days",
+    serviceFee: "Service fee: Contact center",
+    documents: [
+      "Current Year Paid Land Revenue Receipt (अद्यतन लगान रसीद)",
+      "Registry Deed / Khatiyan Proof of Title",
+      "Boundary Holders (Chouhaddi) Names and Neighbor Details",
+      "Applicant Aadhaar & Mobile Number"
+    ],
+    process: [
+      { step: 1, title: "File Maapi Application", description: "Submit government Amin measurement application on e-maapi portal / Anchal office." },
+      { step: 2, title: "Pay Official Government Fee", description: "Deposit designated government Amin measurement fee online." },
+      { step: 3, title: "Notice to Neighbors", description: "Circle Office issues official notice to adjacent plot boundary holders." },
+      { step: 4, title: "On-Site Measurement", description: "Government Amin visits the plot with official map instruments and demarcates boundaries." },
+      { step: 5, title: "Official Maapi Report", description: "Receive signed official field demarcation measurement report." }
+    ],
+    notes: "Ensure adjacent plot boundary owners (चौहद्दीदार) are informed to be present during on-site measurement.",
+    faq: [
+      { question: "Is government Amin measurement report legally valid in court?", answer: "Yes, government Amin measurement conducted through the Circle Office holds full evidentiary value in civil revenue courts." }
+    ]
   }
 ];
+
